@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "jsbarcode": "^3.12.3",
-    "jsdom": "^29.0.2"
-  }
-}
