@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Cycle Count Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #1F2937; line-height: 1.5; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    
+    /* Cards */
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); padding: 24px; margin-bottom: 24px; }
+    .card h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E40AF; }
+    .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #475569; }
+    
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; border: none; font-size: 16px; transition: all 0.2s; }
+    .btn-primary { background: #1E40AF; color: #fff; }
+    .btn-primary:hover { background: #1e3a8a; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-success { background: #059669; color: #fff; }
+    .btn-success:hover { background: #047857; }
+    .btn-secondary { background: #475569; color: #fff; }
+    .btn-secondary:hover { background: #334155; }
+    .btn-ghost { background: transparent; color: #6b7280; }
+    .btn-ghost:hover { background: #f3f4f6; }
+    .btn-small { padding: 8px 16px; font-size: 14px; }
+    
+    /* Forms */
+    input, select { padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; width: 100%; }
+    input:focus, select:focus { outline: none; border-color: #1E40AF; box-shadow: 0 0 0 2px rgba(30,64,175,0.2); }
+    
+    /* Progress bar */
+    .progress-bar { display: flex; justify-content: space-between; margin-bottom: 32px; position: relative; }
+    .progress-bar::before { content: ''; position: absolute; top: 14px; left: 0; right: 0; height: 2px; background: #e5e7eb; z-index: 0; }
+    .progress-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+    .progress-step .circle { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; color: #6b7280; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+    .progress-step.active .circle { background: #1E40AF; color: #fff; }
+    .progress-step.completed .circle { background: #059669; color: #fff; }
+    .progress-step .label { margin-top: 8px; font-size: 12px; color: #6b7280; }
+    .progress-step.active .label { color: #1E40AF; font-weight: 500; }
+    
+    /* Upload zone */
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 12px; padding: 48px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: #1E40AF; background: #eff6ff; }
+    .upload-zone p { color: #6b7280; margin-top: 12px; }
+    .upload-zone .icon { font-size: 48px; }
+    
+    /* Scan input */
+    .scan-input { font-family: 'JetBrains Mono', monospace; font-size: 24px; padding: 16px; text-align: center; letter-spacing: 2px; }
+    .scan-count { text-align: center; font-size: 18px; margin: 16px 0; }
+    .scan-count strong { color: #1E40AF; font-size: 24px; }
+    
+    /* Zone indicator */
+    .zone-badge { display: inline-block; background: #1E40AF; color: #fff; padding: 4px 12px; border-radius: 16px; font-size: 14px; font-weight: 500; margin-left: 8px; }
+    
+    /* Scan data upload */
+    .scan-data-upload { border: 2px dashed #059669; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; background: #f0fdf4; }
+    .scan-data-upload:hover { background: #dcfce7; }
+    
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f8fafc; font-weight: 600; font-size: 14px; }
+    
+    /* Hide screens */
+    .screen { display: none; }
+    .screen.active { display: block; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 24px; border-radius: 8px; color: #fff; font-weight: 500; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 1000; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #059669; }
+    .toast.error { background: #dc2626; }
+    .toast.info { background: #1E40AF; }
+    
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
+    .stat-box { padding: 16px; background: #f8fafc; border-radius: 8px; }
+    .stat-box .value { font-size: 24px; font-weight: 600; color: #1E40AF; }
+    .stat-box .label { font-size: 12px; color: #6b7280; }
+    
+    .progress-indicator { text-align: center; margin-bottom: 16px; color: #6b7280; font-size: 14px; }
+    
+    .nav-buttons { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+    
+    /* Zone summary */
+    .zone-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .zone-tag { background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .zone-tag.active { background: #1E40AF; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+      <div class="progress-step" data-step="0">
+        <div class="circle">🪙</div>
+        <div class="label">Start</div>
+      </div>
+      <div class="progress-step" data-step="1">
+        <div class="circle">1</div>
+        <div class="label">Upload</div>
+      </div>
+      <div class="progress-step" data-step="2">
+        <div class="circle">2</div>
+        <div class="label">Scan</div>
+      </div>
+      <div class="progress-step" data-step="3">
+        <div class="circle">3</div>
+        <div class="label">Review</div>
+      </div>
+      <div class="progress-step" data-step="4">
+        <div class="circle">4</div>
+        <div class="label">Export</div>
+      </div>
+      <div class="progress-step" data-step="5">
+        <div class="circle">5</div>
+        <div class="label">Barcodes</div>
+      </div>
+    </div>
+
+    <!-- Screen 0: Splash -->
+    <div class="screen active" id="screen-splash">
+      <!-- Hero with Plato's Closet branding -->
+      <div style="text-align: center; padding: 24px 0;">
+        <div style="display: inline-block; background: #000; padding: 16px 24px; border-radius: 8px; margin-bottom: 24px;">
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 2px;">
+            <span style="color: #DC2626;">PLATO'S</span>
+            <span style="color: #fff;">CLOSET</span>
+          </div>
+        </div>
+        
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 12px; color: #1F2937;">
+          AI Powered Cycle Count Program
+        </h1>
+        <p style="font-size: 18px; color: #4B5563; max-width: 600px; margin: 0 auto;">
+          Targeted partial inventory counts — fits your schedule, friendly on the budget
+        </p>
+      </div>
+
+      <!-- How It Works -->
+      <div class="card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E40AF;">How It Works</h2>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center;">
+          <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📄</div>
+            <div style="font-weight: 600; color: #1F2937;">1. Export</div>
+            <div style="font-size: 12px; color: #6b7280;">Pull 3 files from DRS</div>
+          </div>
+          <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📱</div>
+            <div style="font-weight: 600; color: #1F2937;">2. Scan</div>
+            <div style="font-size: 12px; color: #6b7280;">Walk the floor with scanner</div>
+          </div>
+          <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
+            <div style="font-weight: 600; color: #1F2937;">3. Review</div>
+            <div style="font-size: 12px; color: #6b7280;">Approve write-offs</div>
+          </div>
+          <div style="padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <div style="font-size: 24px; margin-bottom: 8px;">📤</div>
+            <div style="font-weight: 600; color: #1F2937;">4. Export</div>
+            <div style="font-size: 12px; color: #6b7280;">Send results to DRS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Files from DRS -->
+      <div class="card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E40AF;">From DRS (Winmark Online + POS)</h2>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #1E40AF;">
+            <span style="font-size: 20px;">📋</span>
+            <div>
+              <div style="font-weight: 600; color: #1F2937;">1. Item Buy Detail</div>
+              <div style="font-size: 14px; color: #6b7280;">From Winmark Online &rarr; Reports &rarr; Item Buy Detail. Date range: ends yesterday, starts at least 18 months back. Longer since full count = longer range.</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #1E40AF;">
+            <span style="font-size: 20px;">📊</span>
+            <div>
+              <div style="font-weight: 600; color: #1F2937;">2. Pre-Count File</div>
+              <div style="font-size: 14px; color: #6b7280;">From DRS Cycle Count menu &rarr; select subcategory &rarr; generate precount &rarr; export from POS station.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- You Supply -->
+      <div class="card">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E40AF;">You Supply</h2>
+        <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #059669;">
+          <span style="font-size: 20px;">📱</span>
+          <div>
+            <div style="font-weight: 600; color: #1F2937;">Scan of Everything in the Subcategory</div>
+            <div style="font-size: 14px; color: #6b7280;">Including backstock. Use a laptop with your store's USB barcode scanner. Walk every inch of the floor and backstock area.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barcode Sheets -->
+      <div class="card" style="background: linear-gradient(135deg, #4B5563, #374151); color: #fff;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px;">🔖 Barcode Sheets for Faster Write-Offs</h2>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: center;">
+          <div>
+            <p style="color: #E5E7EB; margin-bottom: 16px;">
+              Instead of manually typing SKUs during write-offs, generate printable barcode sheets. 
+              The person doing write-offs can scan a barcode directly into DRS — fast and accurate.
+            </p>
+            <ol style="list-style: none; color: #D1D5DB; margin-bottom: 12px;">
+              <li style="margin-bottom: 8px;"><strong style="color: #fff;">1.</strong> After approving write-offs, download the SKU list</li>
+              <li style="margin-bottom: 8px;"><strong style="color: #fff;">2.</strong> Upload that list to a barcode generator (100x300 size)</li>
+              <li style="margin-bottom: 8px;"><strong style="color: #fff;">3.</strong> Upload the generated barcodes back here</li>
+              <li><strong style="color: #fff;">4.</strong> Download formatted sheets — 5 across × 22 down (110/page)</li>
+            </ol>
+            <p style="font-size: 12px; color: #9CA3AF;">Print settings: Scale set to "Shrink to Fit"</p>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 8px;">🖨️</div>
+            <div style="font-weight: 600;">Barcode Sheet Generator</div>
+            <div style="font-size: 12px; color: #9CA3AF;">Available after export</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Important Caveats -->
+      <div class="card" style="border: 2px solid #F59E0B; background: #FFFBEB;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #92400E;">⚠️ Important</h2>
+        <ul style="list-style: none; color: #92400E;">
+          <li style="margin-bottom: 8px;">• <strong>Not a substitute for full physical inventory</strong> — This tool helps you catch drift and manage shrinkage between counts, but it won't replace a proper RGIS or Datascan full count.</li>
+          <li style="margin-bottom: 8px;">• <strong>Use results cautiously</strong> — Always verify high-value items before writing off. When in doubt, skip it and investigate manually.</li>
+          <li>• <strong>Best for targeted counts</strong> — Ideal for monthly category checks, pre-clearance verification, or tracking specific bins.</li>
+        </ul>
+      </div>
+
+      <!-- Step 5 Barcode Callout -->
+      <div class="card" style="border-left: 4px solid #1E40AF; background: #EFF6FF;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">🔖</span>
+          <div>
+            <div style="font-weight: 600; color: #1E40AF;">Step 5: Barcode Sheets</div>
+            <div style="font-size: 14px; color: #6b7280;">After approving write-offs, generate printable barcode sheets for fast DRS entry. Available at the end.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div style="text-align: center; padding: 24px;">
+        <button type="button" class="btn btn-primary" id="btn-splash-next" style="font-size: 18px; padding: 16px 40px; cursor: pointer;">Let's Get Started →</button>
+      </div>
+    </div>
+
+    <!-- Screen 1: Upload -->
+    <div class="screen" id="screen-upload">
+      <div class="card">
+        <h2>📁 Step 1: Upload Your Files</h2>
+        <p style="margin-bottom: 16px; color: #6b7280;">Two files needed: Precount (what you scanned) + Item Buy Detail (DRS inventory).</p>
+        
+        <div class="card" style="border-left: 4px solid #1E40AF;">
+          <h3>1. Precount File ⭐ (Required)</h3>
+          <p style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">
+            The list of items you scanned at the store (or from your scanner export).<br>
+            <strong>This filters your inventory down to only the items in this file.</strong><br>
+            Format: Column A = SKU, Column B = Zone (optional)
+          </p>
+          <div class="upload-zone" id="precount-zone" style="border-color: #1E40AF; background: #eff6ff;">
+            <div class="icon">🏷️</div>
+            <p>Drag & drop your Precount CSV/Excel<br>or click to browse</p>
+            <input type="file" id="precount-input" accept=".csv,.xlsx,.xls" style="display: none;">
+          </div>
+          <div id="precount-info" style="display: none; margin-top: 12px; padding: 12px; background: #eff6ff; border-radius: 8px;">
+            <strong>✓ Precount loaded:</strong> <span id="precount-filename"></span> (<span id="precount-count"></span> items)
+          </div>
+        </div>
+        
+        <div class="card" style="border-left: 4px solid #059669;">
+          <h3>2. Item Buy Detail (DRS Export)</h3>
+          <p style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">
+            Full inventory from DRS (Item Buy Detail report).<br>
+            <strong>Only items in the Precount will be included in the count.</strong>
+          </p>
+          <div class="upload-zone" id="inventory-zone" style="border-color: #059669; background: #f0fdf4;">
+            <div class="icon">📋</div>
+            <p>Drag & drop your DRS Item Buy Detail CSV/Excel<br>or click to browse</p>
+            <input type="file" id="inventory-input" accept=".csv,.xlsx,.xls" style="display: none;">
+          </div>
+          <div id="inventory-info" style="display: none; margin-top: 12px; padding: 12px; background: #f0fdf4; border-radius: 8px;">
+            <strong>✓ Inventory loaded:</strong> <span id="inventory-filename"></span> (<span id="inventory-count"></span> items) → <span id="filtered-count">0</span> after filtering
+          </div>
+        </div>
+        
+        <div class="card" style="border-left: 4px solid #92400e; background: #fffbeb;">
+          <h3>3. Floor Scan (Optional)</h3>
+          <p style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">
+            What you scanned on the floor this session. If skipped, you can manually scan on the next screen.
+            <br><strong style="color: #92400e;">⚠️ Must be saved as .csv file (Excel files may cause parsing errors)</strong>
+          </p>
+          <div class="upload-zone" id="scan-data-zone" style="border-color: #92400e; background: #fffbeb;">
+            <div class="icon">📊</div>
+            <p>Drag & drop your floor scan CSV<br>or click to browse</p>
+            <input type="file" id="scan-data-input" accept=".csv" style="display: none;">
+          </div>
+          <div id="scan-data-info" style="display: none; margin-top: 12px; padding: 12px; background: #fffbeb; border-radius: 8px;">
+            <strong>✓ Floor scan loaded:</strong> <span id="scan-data-filename"></span> (<span id="scan-data-count"></span> scans)
+          </div>
+        </div>
+      
+      <div class="nav-buttons">
+        <div></div>
+        <button class="btn btn-primary" id="btn-upload-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Screen 2: Scan (Alternative - Real-time scanning) -->
+    <div class="screen" id="screen-scan">
+      <div class="card">
+        <h2>🔍 Step 2: Scan (Optional)</h2>
+        <p style="margin-bottom: 16px; color: #6b7280;">
+          If you didn't upload scan data, you can scan directly here. 
+          Set a zone below, then scan items. All items scanned after the zone is set belong to that zone.
+        </p>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="font-weight: 500; display: block; margin-bottom: 8px;">Current Zone:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="zone-input" placeholder="e.g., WALL-RACK-1" style="flex: 1;">
+            <button class="btn btn-success btn-small" id="btn-set-zone">Set Zone</button>
+          </div>
+        </div>
+        
+        <div class="zone-summary" id="zone-summary"></div>
+        
+        <input type="text" class="scan-input" id="scan-input" placeholder="Click here and scan items..." autocomplete="off" style="margin-top: 16px;">
+        
+        <div class="scan-count">
+          Items scanned: <strong id="scanned-count">0</strong>
+          <span class="zone-badge" id="current-zone-badge" style="display: none;">Zone: <span id="current-zone-name">-</span></span>
+        </div>
+        
+        <div style="margin-top: 16px;">
+          <button class="btn btn-ghost btn-small" id="btn-finish-zone">End Current Zone</button>
+          <button class="btn btn-ghost btn-small" id="btn-clear-scans">Clear All</button>
+        </div>
+      </div>
+      
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" id="btn-scan-back">← Back</button>
+        <button class="btn btn-primary" id="btn-scan-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Screen 3: Review -->
+    <div class="screen" id="screen-review">
+      <div class="card">
+        <h2>✓ Step 3: Review Items</h2>
+        
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-box">
+            <div class="value" id="stat-total">0</div>
+            <div class="label">In File</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="stat-scanned">0</div>
+            <div class="label">Scanned</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="stat-missing">0</div>
+            <div class="label">Missing</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="stat-pending">0</div>
+            <div class="label">To Review</div>
+          </div>
+        </div>
+        
+        <p style="margin-bottom: 16px; color: #6b7280;">Zones found in scan data:</p>
+        <div class="zone-summary" id="review-zone-summary"></div>
+        
+        <div class="progress-indicator" id="review-progress">Reviewing item 0 of 0</div>
+        
+        <div id="review-items"></div>
+        
+        <div style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+          <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">Batch actions:</p>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-success btn-small" id="btn-accept-all">Accept All Remaining</button>
+            <button class="btn btn-ghost btn-small" id="btn-skip-all">Skip All Remaining</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" id="btn-review-back">← Back</button>
+        <button class="btn btn-primary" id="btn-review-next" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- Screen 4: Export -->
+    <div class="screen" id="screen-export">
+      <div class="card">
+        <h2>📤 Step 4: Export Results</h2>
+        
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-box">
+            <div class="value" id="export-scanned">0</div>
+            <div class="label">Scanned</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="export-accepted">0</div>
+            <div class="label">Accepted</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="export-rejected">0</div>
+            <div class="label">Rejected</div>
+          </div>
+          <div class="stat-box">
+            <div class="value" id="export-value">$0</div>
+            <div class="label">Write-off Value</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>Write-Off Items</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Description</th>
+              <th>Buy Date</th>
+              <th>Cost</th>
+            </tr>
+          </thead>
+          <tbody id="export-table"></tbody>
+        </table>
+      </div>
+      
+      <div class="card">
+        <h3>Download Options</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="btn-download-csv">📄 Download DRS CSV</button>
+          <button class="btn btn-secondary" id="btn-download-zone-csv">📊 Download Zone Report</button>
+        </div>
+      </div>
+      
+      <!-- Duplicate Scan Log -->
+      <div class="card" style="border: 2px solid #F97316;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1F2937;">📋 Duplicate Scan Log</h2>
+        <p style="font-size: 14px; color: #6b7280; margin-bottom: 16px;">
+          Records of items scanned that match previous scans. Threshold settings: Nearby duplicates within 5 items, repeated chunks of 8.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+          <div style="padding: 12px; background: #FFF7ED; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #EA580C;" id="dup-chunk-count">0</div>
+            <div style="font-size: 12px; color: #6b7280;">Repeated Chunks</div>
+          </div>
+          <div style="padding: 12px; background: #FFFBEB; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #D97706;" id="dup-nearby-count">0</div>
+            <div style="font-size: 12px; color: #6b7280;">Nearby Duplicates</div>
+          </div>
+          <div style="padding: 12px; background: #FEF2F2; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #DC2626;" id="dup-exact-count">0</div>
+            <div style="font-size: 12px; color: #6b7280;">Exact Duplicates</div>
+          </div>
+        </div>
+
+        <div id="dup-log-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 16px; display: none;">
+          <table style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Position</th>
+                <th>Issue</th>
+              </tr>
+            </thead>
+            <tbody id="dup-log-table"></tbody>
+          </table>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-download-dup-log" style="width: 100%;">Download Duplicate Scan Log</button>
+      </div>
+
+      <!-- 2 OH Write-Up Candidates -->
+      <div class="card" style="border: 2px solid #FBBF24; background: #FEFCE8;">
+        <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1F2937;">📈 2 OH Write-Up Candidates</h2>
+        <p style="font-size: 14px; color: #6b7280; margin-bottom: 16px;">
+          Items with exactly 2 on-hand that may need inventory written up. (Populated after inventory file comparison)
+        </p>
+        <div style="text-align: center; padding: 24px; color: #6b7280;">
+          ℹ️ This section will be populated after comparing scanned items against your inventory file. Run a cycle count to generate this list.
+        </div>
+      </div>
+      
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" id="btn-export-back">← Back</button>
+        <button class="btn btn-primary" id="btn-go-to-barcodes">Make Barcode Sheets →</button>
+      </div>
+    </div>
+
+    <!-- Screen 5: Barcode Sheets -->
+    <div class="screen" id="screen-barcodes">
+      <div class="card">
+        <h2>🔖 Create Barcode Sheets</h2>
+        <p style="color: #6b7280; margin-bottom: 16px;">
+          Generate printable barcode sheets for your write-off items. This lets you scan barcodes directly into DRS instead of typing SKUs manually.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Step 1: Get Barcodes</h3>
+            <ol style="font-size: 14px; color: #4B5563; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">Download the write-off CSV from the previous step</li>
+              <li style="margin-bottom: 8px;">Go to a barcode generator (like Barcode.tec-it.com)</li>
+              <li style="margin-bottom: 8px;">Select <strong>Code 128</strong> format, size <strong>100×300</strong></li>
+              <li>Upload your CSV to generate barcodes, then download the PDF</li>
+            </ol>
+          </div>
+          <div>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Step 2: Upload Here</h3>
+            <div class="upload-zone" id="barcode-zone" style="border-color: #059669; background: #f0fdf4;">
+              <div class="icon">📄</div>
+              <p>Upload barcode PDF from generator<br>or click to browse</p>
+              <input type="file" id="barcode-input" accept=".pdf" style="display: none;">
+            </div>
+            <div id="barcode-info" style="display: none; margin-top: 12px; padding: 12px; background: #f0fdf4; border-radius: 8px;">
+              <strong>✓ Barcodes loaded!</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="background: #F3F4F6;">
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Sheet Format</h3>
+          <p style="font-size: 14px; color: #4B5563;">
+            Your sheets will be formatted <strong>5 across × 22 down</strong> (110 barcodes per page).<br>
+            When printing: Set scale to <strong>"Shrink to Fit"</strong> to ensure all barcodes fit on the page.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
+          <button class="btn btn-primary" id="btn-generate-sheets" disabled>Download Formatted Sheets</button>
+          <button class="btn btn-secondary" id="btn-barcode-finish">Skip & Finish</button>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" id="btn-barcode-back">← Back</button>
+        <button class="btn btn-success" id="btn-barcode-finish-nav">Finish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    // State
+    let precountData = []; // SKUs from precount file (filters inventory)
+    let filteredInventory = []; // Inventory filtered to only items in precount
+    let inventory = []; // Full items from DRS file (unfiltered - kept for reference)
+    let scanData = []; // {sku, zone, isDuplicate, isNearbyDuplicate, isRepeatedChunk} from floor scan file
+    
+    // Duplicate detection config
+    const NEARBY_DUPLICATE_THRESHOLD = 5;  // Duplicates within X items of each other
+    const EXACT_CHUNK_THRESHOLD = 8;       // Same chunk scanned twice
+    let currentZone = null;
+    let zones = {}; // zone -> count
+    let reviewItems = [];
+    let currentReviewIndex = 0;
+    let decisions = {};
+
+    // Screen navigation
+    const screens = ['splash', 'upload', 'scan', 'review', 'export', 'barcodes'];
+    let currentScreen = 0;
+
+    function showScreen(index) {
+      screens.forEach((s, i) => {
+        document.getElementById(`screen-${s}`).classList.toggle('active', i === index);
+      });
+      
+      document.querySelectorAll('.progress-step').forEach((el, i) => {
+        el.classList.remove('active', 'completed');
+        if (i < index) el.classList.add('completed');
+        if (i === index) el.classList.add('active');
+      });
+      
+      currentScreen = index;
+    }
+
+    function nextScreen() {
+      if (currentScreen === 2) prepareReview(); // Going to scan -> review
+      if (currentScreen === 3) prepareExport(); // Going to review -> export
+      if (currentScreen < screens.length - 1) showScreen(currentScreen + 1);
+    }
+
+    function prevScreen() {
+      if (currentScreen > 0) showScreen(currentScreen - 1);
+    }
+
+    // Splash screen button
+    document.getElementById('btn-splash-next').addEventListener('click', () => {
+      showScreen(1);
+    });
+
+    // ===== PRECOUNT FILE (Filters inventory) =====
+    const precountZone = document.getElementById('precount-zone');
+    const precountInput = document.getElementById('precount-input');
+    
+    precountZone.addEventListener('click', () => precountInput.click());
+    precountZone.addEventListener('dragover', e => { e.preventDefault(); precountZone.classList.add('dragover'); });
+    precountZone.addEventListener('dragleave', () => precountZone.classList.remove('dragover'));
+    precountZone.addEventListener('drop', e => { e.preventDefault(); precountZone.classList.remove('dragover'); handlePrecountFile(e.dataTransfer.files[0]); });
+    precountInput.addEventListener('change', e => handlePrecountFile(e.target.files[0]));
+
+    function handlePrecountFile(file) {
+      if (!file) return;
+      
+      const ext = file.name.split('.').pop().toLowerCase();
+      
+      const processPrecountData = (rows) => {
+        // Extract just SKUs from precount file
+        precountData = rows.map(row => String(row[0] || '').trim().toUpperCase()).filter(sku => sku);
+        
+        // Filter out header-like entries
+        const headerTerms = ['sku', 'item', 'scan', 'barcode', 'description', 'item #', 'sku #'];
+        precountData = precountData.filter(sku => sku && !headerTerms.includes(sku.toLowerCase()));
+        
+        document.getElementById('precount-filename').textContent = file.name;
+        document.getElementById('precount-count').textContent = precountData.length.toLocaleString();
+        document.getElementById('precount-info').style.display = 'block';
+        
+        // If inventory already loaded, re-filter it
+        if (inventory.length > 0) {
+          filterInventoryToPrecount();
+        }
+        
+        checkReady();
+      };
+      
+      if (ext === 'csv') {
+        Papa.parse(file, {
+          header: false,
+          skipEmptyLines: true,
+          complete: results => processPrecountData(results.data)
+        });
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+          const rows = jsonData.map(row => Object.values(row));
+          processPrecountData(rows);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        showToast('Unsupported file type. Use CSV or Excel.', 'error');
+      }
+    }
+    
+    function filterInventoryToPrecount() {
+      if (precountData.length === 0) {
+        filteredInventory = [...inventory];
+      } else {
+        const precountSet = new Set(precountData);
+        filteredInventory = inventory.filter(item => precountSet.has(item.sku));
+      }
+      
+      document.getElementById('filtered-count').textContent = filteredInventory.length.toLocaleString();
+      
+      if (precountData.length > 0 && filteredInventory.length === 0) {
+        showToast('Warning: No items match between Precount and Inventory!', 'error');
+      }
+    }
+
+    // ===== INVENTORY FILE =====
+    const invZone = document.getElementById('inventory-zone');
+    const invInput = document.getElementById('inventory-input');
+    
+    invZone.addEventListener('click', () => invInput.click());
+    invZone.addEventListener('dragover', e => { e.preventDefault(); invZone.classList.add('dragover'); });
+    invZone.addEventListener('dragleave', () => invZone.classList.remove('dragover'));
+    invZone.addEventListener('drop', e => { e.preventDefault(); invZone.classList.remove('dragover'); handleInventoryFile(e.dataTransfer.files[0]); });
+    invInput.addEventListener('change', e => handleInventoryFile(e.target.files[0]));
+
+    function handleInventoryFile(file) {
+      if (!file) return;
+      
+      // Clear previous data before loading new file
+      inventory = [];
+      filteredInventory = [];
+      scanData = [];
+      reviewItems = [];
+      decisions = {};
+      zones = {};
+      currentZone = null;
+      
+      const ext = file.name.split('.').pop().toLowerCase();
+      
+      // Helper to process inventory data
+      const processInventoryData = (data) => {
+        if (!data || data.length === 0) {
+          showToast('No data found in file', 'error');
+          return;
+        }
+        
+        // Get headers
+        const headers = Object.keys(data[0]);
+        
+        // Find column indexes
+        const findCol = (patterns) => headers.find(h => patterns.some(p => h.toLowerCase().includes(p)));
+        const skuCol = findCol(['ski', 'sku', 'item id', 'item', 'sku no']);
+        const descCol = findCol(['description', 'long description', 'desc', 'name', 'model', 'product']);
+        const costCol = findCol(['drs cost', 'cost', 'buy cost']);
+        const retailCol = findCol(['drs retail', 'current retail', 'retail', 'price', 'list price']);
+        const brandCol = findCol(['brand', 'brand description', 'manufacturer']);
+        const dateCol = findCol(['buy date', 'date', 'purchase', 'sale']);
+        const sizeCol = findCol(['size', 'sized', 'garment size']);
+        const categoryCol = findCol(['category', 'subcategory', 'type', 'dept', 'department']);
+        
+        if (!skuCol) {
+          showToast('Could not find SKU column. Columns found: ' + headers.join(', '), 'error');
+          return;
+        }
+        
+        inventory = data.map(row => ({
+          sku: String(row[skuCol] || '').trim().toUpperCase(),
+          description: row[descCol] || '',
+          cost: parseFloat(row[costCol] || 0) || 0,
+          retail: parseFloat(row[retailCol] || 0) || 0,
+          brand: row[brandCol] || '',
+          buyDate: row[dateCol] || '',
+          size: row[sizeCol] || '',
+          category: row[categoryCol] || ''
+        })).filter(item => item.sku);
+        
+        document.getElementById('inventory-filename').textContent = file.name;
+        document.getElementById('inventory-count').textContent = inventory.length.toLocaleString();
+        document.getElementById('inventory-info').style.display = 'block';
+        
+        // Apply precount filter if precount is already loaded
+        if (precountData.length > 0) {
+          filterInventoryToPrecount();
+        } else {
+          filteredInventory = [...inventory];
+          document.getElementById('filtered-count').textContent = filteredInventory.length.toLocaleString();
+        }
+        
+        checkReady();
+      };
+      
+      if (ext === 'csv') {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: results => processInventoryData(results.data)
+        });
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+          processInventoryData(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        showToast('Unsupported file type. Use CSV or Excel.', 'error');
+      }
+    }
+
+    // ===== SCAN DATA FILE =====
+    const scanZone = document.getElementById('scan-data-zone');
+    const scanInput = document.getElementById('scan-data-input');
+    
+    scanZone.addEventListener('click', () => scanInput.click());
+    scanZone.addEventListener('dragover', e => { e.preventDefault(); scanZone.classList.add('dragover'); });
+    scanZone.addEventListener('dragleave', () => scanZone.classList.remove('dragover'));
+    scanZone.addEventListener('drop', e => { e.preventDefault(); scanZone.classList.remove('dragover'); handleScanDataFile(e.dataTransfer.files[0]); });
+    scanInput.addEventListener('change', e => handleScanDataFile(e.target.files[0]));
+
+    function handleScanDataFile(file) {
+      if (!file) return;
+      
+      // Clear previous scan data when loading new file
+      scanData = [];
+      zones = {};
+      currentZone = null;
+      
+      const ext = file.name.split('.').pop().toLowerCase();
+      
+      const isHeaderRow = (row) => {
+        if (!row || row.length === 0) return false;
+        const firstCell = String(row[0] || '').toLowerCase().trim();
+        // Check if first cell looks like a header word
+        const headerWords = ['sku', 'zone', 'item', 'scan', 'barcode', 'description'];
+        const isHeader = headerWords.some(w => firstCell === w || firstCell.includes(w + ' ') || firstCell.startsWith(w));
+        // Also check if SKU column contains non-SKU-like values (text that isn't alphanumeric)
+        if (isHeader) return true;
+        // Additional check: if first cell is short text with no numbers, likely header
+        return firstCell.length > 0 && firstCell.length < 20 && /^[a-z\s]+$/i.test(firstCell) && !/\d/.test(firstCell);
+      };
+      
+      const processScanData = (rows) => {
+          // Skip header row if detected
+          if (rows.length > 0 && isHeaderRow(rows[0])) {
+            rows = rows.slice(1);
+            showToast('Header row detected and skipped', 'info');
+          }
+          
+          scanData = rows.map((row, idx) => {
+            const sku = String(row[0] || '').trim().toUpperCase();
+            const zone = row[1] ? String(row[1]).trim() : 'Unassigned';
+            
+            // Check for exact duplicate
+            const isDuplicate = scanData.some(s => s.sku === sku);
+            
+            // Check for nearby duplicate (within threshold)
+            const nearbyItems = scanData.slice(-NEARBY_DUPLICATE_THRESHOLD);
+            const isNearbyDuplicate = nearbyItems.some(s => s.sku === sku);
+            
+            // Check for repeated chunk
+            let isRepeatedChunk = false;
+            if (scanData.length >= EXACT_CHUNK_THRESHOLD) {
+              const lastChunk = scanData.slice(-EXACT_CHUNK_THRESHOLD).map(s => s.sku).join(',');
+              const newChunk = [...scanData.slice(-EXACT_CHUNK_THRESHOLD + 1).map(s => s.sku), sku].join(',');
+              isRepeatedChunk = lastChunk === newChunk;
+            }
+            
+            return { 
+              sku, 
+              zone, 
+              isDuplicate, 
+              isNearbyDuplicate: isNearbyDuplicate && !isDuplicate,
+              isRepeatedChunk,
+              scanPosition: idx 
+            };
+          }).filter(item => {
+            // Filter out header rows that slipped through
+            const headerTerms = ['sku', 'zone', 'item', 'scan', 'barcode', 'description', 'item #', 'sku #'];
+            return item.sku && !headerTerms.includes(item.sku.toLowerCase());
+          });
+          
+          // Count zones (excluding any that look like headers)
+          zones = {};
+          scanData.forEach(item => {
+            zones[item.zone] = (zones[item.zone] || 0) + 1;
+          });
+          
+          // Show warning if we only got a few items (might be parsing issue)
+          if (scanData.length < 10 && rows.length > 10) {
+            showToast('Warning: Only ' + scanData.length + ' items parsed. Check file format.', 'error');
+          }
+          
+          document.getElementById('scan-data-filename').textContent = file.name;
+          document.getElementById('scan-data-count').textContent = scanData.length.toLocaleString();
+          document.getElementById('scan-data-info').style.display = 'block';
+          checkReady();
+      };
+      
+      if (ext === 'csv') {
+        Papa.parse(file, {
+          header: false,
+          skipEmptyLines: true,
+          complete: results => processScanData(results.data)
+        });
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+          // Convert array of objects to array of arrays
+          const rows = jsonData.map(row => Object.values(row));
+          processScanData(rows);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        showToast('Unsupported file type. Use CSV or Excel.', 'error');
+        return;
+      }
+      
+      function checkReady() {
+      // Require both precount AND inventory loaded (scan data is optional)
+      const ready = precountData.length > 0 && filteredInventory.length > 0;
+      document.getElementById('btn-upload-next').disabled = !ready;
+      if (ready) {
+        const msg = scanData.length > 0 ? 'All 3 files loaded!' : 'Precount + Inventory loaded! Floor scan optional.';
+        showToast(msg, 'success');
+      }
+    }
+
+    // ===== REAL-TIME SCANNING =====
+    const scanInputField = document.getElementById('scan-input');
+    scanInputField.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const sku = scanInputField.value.trim().toUpperCase();
+        if (sku) {
+          const currentPos = scanData.length;
+          const isDuplicate = scanData.some(s => s.sku === sku);
+          const nearbyItems = scanData.slice(-NEARBY_DUPLICATE_THRESHOLD);
+          const isNearbyDuplicate = nearbyItems.some(s => s.sku === sku);
+          
+          let isRepeatedChunk = false;
+          if (scanData.length >= EXACT_CHUNK_THRESHOLD) {
+            const lastChunk = scanData.slice(-EXACT_CHUNK_THRESHOLD).map(s => s.sku).join(',');
+            const newChunk = [...scanData.slice(-EXACT_CHUNK_THRESHOLD + 1).map(s => s.sku), sku].join(',');
+            isRepeatedChunk = lastChunk === newChunk;
+          }
+          
+          scanData.push({ 
+            sku, 
+            zone: currentZone || 'Unassigned',
+            isDuplicate,
+            isNearbyDuplicate: isNearbyDuplicate && !isDuplicate,
+            isRepeatedChunk,
+            scanPosition: currentPos
+          });
+          zones[currentZone || 'Unassigned'] = (zones[currentZone || 'Unassigned'] || 0) + 1;
+          scanInputField.value = '';
+          updateScanCount();
+        }
+      }
+    });
+
+    document.getElementById('btn-set-zone').addEventListener('click', () => {
+      const zone = document.getElementById('zone-input').value.trim().toUpperCase();
+      if (zone) {
+        currentZone = zone;
+        document.getElementById('current-zone-name').textContent = currentZone;
+        document.getElementById('current-zone-badge').style.display = 'inline-block';
+        showToast(`Zone set to: ${currentZone}`, 'info');
+        updateZoneSummary();
+      }
+    });
+
+    document.getElementById('btn-finish-zone').addEventListener('click', () => {
+      currentZone = null;
+      document.getElementById('current-zone-badge').style.display = 'none';
+      document.getElementById('zone-input').value = '';
+      showToast('Zone ended. Start a new zone to continue.', 'info');
+      updateZoneSummary();
+    });
+
+    document.getElementById('btn-clear-scans').addEventListener('click', () => {
+      scanData = [];
+      zones = {};
+      currentZone = null;
+      updateScanCount();
+      showToast('All scans cleared', 'info');
+    });
+
+    function updateScanCount() {
+      document.getElementById('scanned-count').textContent = scanData.length;
+      document.getElementById('btn-scan-next').disabled = scanData.length === 0;
+    }
+
+    function updateZoneSummary() {
+      const container = document.getElementById('zone-summary');
+      container.innerHTML = Object.entries(zones).map(([zone, count]) => 
+        `<span class="zone-tag ${zone === currentZone ? 'active' : ''}">${zone}: ${count}</span>`
+      ).join('');
+    }
+
+    // ===== REVIEW =====
+    function prepareReview() {
+      // Clear previous review state
+      reviewItems = [];
+      decisions = {};
+      currentReviewIndex = 0;
+      
+      // Normalize scan SKUs to uppercase for matching
+      const scannedSKUs = new Set(scanData.map(s => s.sku.toUpperCase().trim()));
+      
+      // Use FILTERED inventory (only items in precount) for review
+      reviewItems = filteredInventory
+        .filter(item => !scannedSKUs.has(item.sku.toUpperCase().trim()));
+        // No cap - show all missing items
+      
+      // Add zone info to each review item
+      const scanDataNormalized = scanData.map(s => ({ ...s, sku: s.sku.toUpperCase().trim() }));
+      reviewItems = reviewItems.map(item => {
+        const scanEntry = scanDataNormalized.find(s => s.sku === item.sku.toUpperCase().trim());
+        return { ...item, zone: scanEntry ? scanEntry.zone : 'Not Scanned' };
+      });
+      
+      currentReviewIndex = 0;
+      decisions = {};
+      
+      // Show filtered count in stats
+      document.getElementById('stat-total').textContent = filteredInventory.length.toLocaleString();
+      document.getElementById('stat-scanned').textContent = scanData.length.toLocaleString();
+      document.getElementById('stat-missing').textContent = reviewItems.length.toLocaleString();
+      document.getElementById('stat-pending').textContent = reviewItems.length.toLocaleString();
+      
+      // Zone summary
+      const zoneSummary = document.getElementById('review-zone-summary');
+      zoneSummary.innerHTML = Object.entries(zones).map(([zone, count]) => 
+        `<span class="zone-tag">${zone}: ${count}</span>`
+      ).join('');
+      
+      renderReviewItem();
+    }
+
+    function renderReviewItem() {
+      const container = document.getElementById('review-items');
+      const progress = document.getElementById('review-progress');
+      
+      if (currentReviewIndex >= reviewItems.length) {
+        container.innerHTML = '<div style="text-align: center; padding: 48px; color: #6b7280;">All items reviewed!</div>';
+        progress.textContent = 'Done';
+        document.getElementById('btn-review-next').disabled = false;
+        return;
+      }
+      
+      document.getElementById('btn-review-next').disabled = true;
+      progress.textContent = `Reviewing item ${currentReviewIndex + 1} of ${reviewItems.length}`;
+      
+      const item = reviewItems[currentReviewIndex];
+      
+      // Check if this item already has a decision
+      const existingDecision = decisions[item.sku];
+      const isAccepted = existingDecision === 'accepted';
+      const isSkipped = existingDecision === 'skipped';
+      const cardStyle = isAccepted ? 'border-left: 4px solid #059669; background: #f0fdf4;' : (isSkipped ? 'border-left: 4px solid #6b7280; background: #f3f4f6;' : 'border-left: 4px solid #dc2626;');
+      const statusText = isAccepted ? '✓ ACCEPTED' : (isSkipped ? '○ SKIPPED' : 'MISSING - In file but not scanned');
+      const statusStyle = isAccepted ? 'background: #dcfce7; color: #059669;' : (isSkipped ? 'background: #e5e7eb; color: #6b7280;' : 'background: #fef2f2; color: #dc2626;');
+      
+      // Convert Excel serial date to YYYY-MM-DD
+      function formatExcelDate(val) {
+        if (!val) return '-';
+        const num = parseInt(val, 10);
+        if (!isNaN(num) && num > 30000) {
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + num * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        }
+        return String(val);
+      }
+      
+      const descWithBrand = item.description && item.brand 
+        ? `${item.description}/${item.brand}` 
+        : (item.description || item.brand || '-');
+      const formattedBuyDate = formatExcelDate(item.buyDate);
+      
+      container.innerHTML = `
+        <div class="card" style="margin-top: 16px; ${cardStyle}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-family: monospace; color: #6b7280;">${item.sku}</span>
+            <span style="font-weight: 600; color: #1E40AF;">${formattedBuyDate}</span>
+          </div>
+          <div style="font-size: 18px; font-weight: 500; margin-bottom: 8px; color: #1F2937;">${descWithBrand}</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 14px; margin-bottom: 12px;">
+            <div><span style="color: #6b7280;">Size:</span> <strong>${item.size || '-'}</strong></div>
+            <div><span style="color: #6b7280;">Cost:</span> <strong>$${item.cost.toFixed(2)}</strong></div>
+            <div><span style="color: #6b7280;">Retail:</span> <strong>$${item.retail.toFixed(2)}</strong></div>
+          </div>
+          <div style="padding: 8px; border-radius: 4px; font-size: 14px; font-weight: 500; ${statusStyle}">
+            ${statusText}
+          </div>
+          ${!existingDecision ? `
+          <div style="display: flex; gap: 12px; margin-top: 16px;">
+            <button class="btn btn-success" onclick="acceptItem()">✓ Accept Write-Off</button>
+            <button class="btn btn-ghost" onclick="skipItem()">✗ Skip</button>
+          </div>
+          ` : ''}
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+            <button class="btn btn-ghost btn-small" onclick="prevItem()">← Previous</button>
+            <span style="margin: 0 12px; color: #6b7280;">${currentReviewIndex + 1} of ${reviewItems.length}</span>
+            <button class="btn btn-ghost btn-small" onclick="nextItem()">Next →</button>
+          </div>
+        </div>
+      `;
+      
+      document.onkeydown = (e) => {
+        if (e.key === 'ArrowRight') acceptItem();
+        if (e.key === 'ArrowLeft') skipItem();
+        if (e.key === 'ArrowUp') prevItem();
+        if (e.key === 'ArrowDown') nextItem();
+      };
+    }
+
+    function acceptItem() {
+      const item = reviewItems[currentReviewIndex];
+      decisions[item.sku] = 'accepted';
+      showToast('Accepted', 'success');
+      currentReviewIndex++;
+      if (currentReviewIndex >= reviewItems.length) currentReviewIndex = reviewItems.length - 1;
+      renderReviewItem();
+    }
+
+    function skipItem() {
+      const item = reviewItems[currentReviewIndex];
+      decisions[item.sku] = 'skipped';
+      currentReviewIndex++;
+      if (currentReviewIndex >= reviewItems.length) currentReviewIndex = reviewItems.length - 1;
+      renderReviewItem();
+    }
+    
+    function prevItem() {
+      if (currentReviewIndex > 0) {
+        currentReviewIndex--;
+        renderReviewItem();
+      }
+    }
+    
+    function nextItem() {
+      if (currentReviewIndex < reviewItems.length - 1) {
+        currentReviewIndex++;
+        renderReviewItem();
+      }
+    }
+
+    document.getElementById('btn-accept-all').addEventListener('click', () => {
+      for (let i = currentReviewIndex; i < reviewItems.length; i++) {
+        decisions[reviewItems[i].sku] = 'accepted';
+      }
+      currentReviewIndex = reviewItems.length;
+      renderReviewItem();
+      showToast('All remaining items accepted', 'success');
+    });
+
+    document.getElementById('btn-skip-all').addEventListener('click', () => {
+      for (let i = currentReviewIndex; i < reviewItems.length; i++) {
+        decisions[reviewItems[i].sku] = 'skipped';
+      }
+      currentReviewIndex = reviewItems.length;
+      renderReviewItem();
+    });
+
+    // ===== EXPORT =====
+    function prepareExport() {
+      const accepted = reviewItems.filter(item => decisions[item.sku] === 'accepted');
+      const rejected = reviewItems.filter(item => decisions[item.sku] === 'skipped');
+      let totalValue = 0;
+      
+      accepted.forEach(item => totalValue += item.cost);
+      
+      document.getElementById('export-scanned').textContent = scanData.length;
+      document.getElementById('export-accepted').textContent = accepted.length;
+      document.getElementById('export-rejected').textContent = rejected.length;
+      document.getElementById('export-value').textContent = '$' + totalValue.toFixed(2);
+      
+      // Format Excel serial date to YYYY-MM-DD
+      function formatExcelDate(val) {
+        if (!val) return '-';
+        const num = parseInt(val, 10);
+        if (!isNaN(num) && num > 30000) {
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + num * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        }
+        return String(val);
+      }
+      
+      const tbody = document.getElementById('export-table');
+      tbody.innerHTML = accepted.map(item => {
+        const descWithBrand = item.description && item.brand 
+          ? `${item.description}/${item.brand}` 
+          : (item.description || item.brand || '-');
+        return `
+        <tr>
+          <td style="font-family: monospace;">${item.sku}</td>
+          <td>${descWithBrand}</td>
+          <td>${formatExcelDate(item.buyDate)}</td>
+          <td>$${item.cost.toFixed(2)}</td>
+        </tr>
+      `}).join('');
+      
+      // Populate duplicate scan log
+      const duplicateItems = scanData.filter(item => item.isDuplicate || item.isNearbyDuplicate || item.isRepeatedChunk);
+      const repeatedChunks = scanData.filter(item => item.isRepeatedChunk);
+      const nearbyDuplicates = scanData.filter(item => item.isNearbyDuplicate);
+      const exactDuplicates = scanData.filter(item => item.isDuplicate);
+      
+      document.getElementById('dup-chunk-count').textContent = repeatedChunks.length;
+      document.getElementById('dup-nearby-count').textContent = nearbyDuplicates.length;
+      document.getElementById('dup-exact-count').textContent = exactDuplicates.length;
+      
+      const dupTable = document.getElementById('dup-log-table');
+      const dupLogList = document.getElementById('dup-log-list');
+      
+      if (duplicateItems.length > 0) {
+        dupLogList.style.display = 'block';
+        dupTable.innerHTML = duplicateItems.slice(0, 20).map(item => `
+          <tr>
+            <td style="font-family: monospace;">${item.sku}</td>
+            <td>${item.scanPosition || 0}</td>
+            <td style="color: ${item.isRepeatedChunk ? '#EA580C' : item.isNearbyDuplicate ? '#D97706' : '#DC2626'}; font-weight: 500;">
+              ${item.isRepeatedChunk ? 'REPEATED CHUNK' : item.isNearbyDuplicate ? 'NEARBY' : 'DUPLICATE'}
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        dupLogList.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-download-csv').addEventListener('click', () => {
+      const accepted = reviewItems.filter(item => decisions[item.sku] === 'accepted');
+      if (accepted.length === 0) { showToast('No items to export', 'error'); return; }
+      
+      // Format Excel serial date
+      function formatExcelDate(val) {
+        if (!val) return '';
+        const num = parseInt(val, 10);
+        if (!isNaN(num) && num > 30000) {
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + num * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        }
+        return String(val);
+      }
+      
+      const csv = Papa.unparse(accepted.map(item => {
+        const descWithBrand = item.description && item.brand 
+          ? `${item.description}/${item.brand}` 
+          : (item.description || item.brand || '');
+        return {
+          SKU: item.sku,
+          Description: descWithBrand,
+          Size: item.size || '',
+          BuyDate: formatExcelDate(item.buyDate),
+          Cost: item.cost,
+          Retail: item.retail,
+          Category: item.category || '',
+          ReasonCode: 'C-Cycl',
+          Notes: 'Mini cycle count ' + new Date().toISOString().split('T')[0]
+        };
+      }));
+      
+      downloadBlob(csv, `adjustments_${new Date().toISOString().split('T')[0]}.csv`);
+      showToast('CSV downloaded', 'success');
+    });
+
+    document.getElementById('btn-download-zone-csv').addEventListener('click', () => {
+      const accepted = reviewItems.filter(item => decisions[item.sku] === 'accepted');
+      if (accepted.length === 0) { showToast('No items to export', 'error'); return; }
+      
+      // Group by zone
+      const byZone = {};
+      accepted.forEach(item => {
+        if (!byZone[item.zone]) byZone[item.zone] = [];
+        byZone[item.zone].push(item);
+      });
+      
+      // Format Excel serial date
+      function formatExcelDate(val) {
+        if (!val) return '';
+        const num = parseInt(val, 10);
+        if (!isNaN(num) && num > 30000) {
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + num * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        }
+        return String(val);
+      }
+      
+      const csv = Papa.unparse(Object.entries(byZone).flatMap(([zone, items]) => 
+        items.map(item => ({ 
+          Zone: zone, 
+          SKU: item.sku, 
+          Description: item.description && item.brand ? `${item.description}/${item.brand}` : (item.description || item.brand || ''),
+          BuyDate: formatExcelDate(item.buyDate),
+          Cost: item.cost, 
+          Retail: item.retail 
+        }))
+      ));
+      
+      downloadBlob(csv, `zone_report_${new Date().toISOString().split('T')[0]}.csv`);
+      showToast('Zone report downloaded', 'success');
+    });
+
+    // Download duplicate scan log
+    document.getElementById('btn-download-dup-log').addEventListener('click', () => {
+      const duplicateItems = scanData.filter(item => item.isDuplicate || item.isNearbyDuplicate || item.isRepeatedChunk);
+      if (duplicateItems.length === 0) { showToast('No duplicates to export', 'info'); return; }
+      
+// Find other position for duplicates
+      const getOtherPosition = (item, allItems) => {
+        const firstIdx = allItems.findIndex(i => i.sku === item.sku && i.scanPosition !== item.scanPosition);
+        return firstIdx >= 0 ? firstIdx : '';
+      };
+      
+      const headers = ['SKU', 'Scan Position', 'Other Position', 'Zone', 'Issue Type', 'Notes'];
+      const rows = duplicateItems.map(item => [
+        item.sku,
+        item.scanPosition || 0,
+        getOtherPosition(item, scanData),
+        item.zone || 'Endcap',
+        item.isRepeatedChunk ? 'REPEATED_CHUNK' : item.isNearbyDuplicate ? 'NEARBY_DUPLICATE' : 'EXACT_DUPLICATE',
+        item.isRepeatedChunk ? `Same ${EXACT_CHUNK_THRESHOLD} items scanned twice` : item.isNearbyDuplicate ? `Within ${NEARBY_DUPLICATE_THRESHOLD} scans` : 'Already scanned'
+      ]);
+      
+      const csv = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+      downloadBlob(csv, `duplicate_scan_log_${new Date().toISOString().split('T')[0]}.csv`);
+      showToast('Duplicate scan log downloaded', 'success');
+    });
+
+    function downloadBlob(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+    }
+
+    // ===== NAV =====
+    document.getElementById('btn-upload-next').addEventListener('click', nextScreen);
+    document.getElementById('btn-scan-back').addEventListener('click', prevScreen);
+    document.getElementById('btn-scan-next').addEventListener('click', nextScreen);
+    document.getElementById('btn-review-back').addEventListener('click', prevScreen);
+    document.getElementById('btn-review-next').addEventListener('click', nextScreen);
+    document.getElementById('btn-export-back').addEventListener('click', prevScreen);
+    document.getElementById('btn-go-to-barcodes').addEventListener('click', () => showScreen(5));
+    document.getElementById('btn-barcode-back').addEventListener('click', prevScreen);
+    document.getElementById('btn-barcode-finish').addEventListener('click', () => showToast('Done! Refresh to start new count.', 'success'));
+    document.getElementById('btn-barcode-finish-nav').addEventListener('click', () => showToast('Done! Refresh to start new count.', 'success'));
+
+    // ===== TOAST =====
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Focus scan input on scan screen
+    const originalShowScreen = showScreen;
+    showScreen = function(index) {
+      originalShowScreen(index);
+      if (index === 1) setTimeout(() => scanInputField.focus(), 100);
+    };
+    
+    // Initialize - show splash screen
+    showScreen(0);
+  </script>
+</body>
+</html>

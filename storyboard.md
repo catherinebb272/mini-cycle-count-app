@@ -444,13 +444,51 @@ Allow user to download or email the final write-off list.
 - **Navigation:** Back + Finish
 
 ### Barcode ZIP Processing
-- **Input:** ZIP file from barcodegenerator.tech (Code 128, ~200 PNG files)
+- **Input:** ZIP file from barcodegenerator.tech (Code 128, PNG files)
 - **Process:** 
   1. User uploads ZIP
   2. App unzips using JSZip
-  3. Creates 5×22 grid layouts (5 columns, 22 rows)
+  3. Creates 5×22 grid layouts (5 columns, 22 rows per page)
   4. Generates printable PDF/HTML
 - **Output:** Print-ready barcode sheets
+
+---
+
+## Barcode Sheet Generation Process (Manual)
+
+**When you need to generate printable barcode sheets for scanning:**
+
+### Step 1: Generate Barcode Images
+1. Go to [barcodegenerator.tech](https://barcodegenerator.tech)
+2. Select "Code 128" as the barcode type
+3. Enter the SKUs (one per line) from your inventory file
+4. Set options: Width 2, Height 50, no text display
+5. Generate and download as ZIP containing PNG images
+
+### Step 2: Arrange Images into Grid
+1. Place PNG images in `/barcodes/` folder (numbered sequentially)
+2. Create HTML with 5-column × 22-row grid:
+   ```html
+   <div class="page">
+     <div class="barcode"><img src="barcodes/barcode-Code128_1.png"></div>
+     <div class="barcode"><img src="barcodes/barcode-Code128_2.png"></div>
+     <!-- ... repeat for all images -->
+   </div>
+   ```
+
+### Step 3: Convert to PDF
+```bash
+wkhtmltopdf --page-size Letter \
+  --margin-top 0.25in --margin-bottom 0.25in \
+  --margin-left 0.25in --margin-right 0.25in \
+  --enable-local-file-access \
+  shorts-barcodes-printable.html shorts-barcodes-printable.pdf
+```
+
+**Rules:**
+- 110 barcodes per page (5×22 grid)
+- Fewer barcodes = partial page
+- More than 110 = multiple pages
 
 ---
 
